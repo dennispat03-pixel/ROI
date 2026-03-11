@@ -147,13 +147,19 @@
     font-family: 'Syne', sans-serif;
     font-size: clamp(32px, 6vw, 52px);
     font-weight: 800;
-    line-height: 1.05;
+    line-height: 1.1;
     letter-spacing: -2px;
     margin-bottom: 20px;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
   }
   .hero h1 em {
     font-style: normal;
     color: var(--accent);
+  }
+  html[lang="de"] .hero h1 {
+    font-size: clamp(26px, 5vw, 44px);
   }
   .hero p {
     font-size: 17px;
@@ -834,19 +840,22 @@
     background: var(--card-bg);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 20px;
-    padding: 40px;
+    padding: 52px 40px 40px;
     text-align: center;
     margin-bottom: 32px;
   }
+  .email-gate img { margin-bottom: 32px; }
   .email-gate .icon-lg { font-size: 48px; margin-bottom: 16px; }
   .email-gate h2 {
     font-family: 'Syne', sans-serif;
     font-size: 26px;
     font-weight: 800;
-    letter-spacing: -0.5px;
-    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+    margin-bottom: 16px;
+    color: var(--white);
+    line-height: 1.25;
   }
-  .email-gate p { color: #8ca4b5; font-size: 15px; margin-bottom: 28px; line-height: 1.6; }
+  .email-gate p { color: #8ca4b5; font-size: 14px; margin-bottom: 36px; line-height: 1.75; max-width: 480px; margin-left: auto; margin-right: auto; }
 
   .trust-badges {
     display: flex;
@@ -1144,7 +1153,7 @@
         <label id="lbl-employees">Aantal kledingdragers (ook extern)</label>
         <div class="num-stepper">
           <button type="button" class="num-step-btn minus" onmousedown="startHold(stepNum,'employees',-10,event)" ontouchstart="startHold(stepNum,'employees',-10,event)">−</button>
-          <input type="number" id="employees" placeholder="bijv. 250" min="1" oninput="clearFieldError('err-employees')">
+          <input type="number" id="employees" placeholder="bijv. 250" min="1" oninput="clearFieldError('err-employees'); autoSuggestHours()">
           <button type="button" class="num-step-btn plus" onmousedown="startHold(stepNum,'employees',10,event)" ontouchstart="startHold(stepNum,'employees',10,event)">+</button>
         </div>
         <span class="field-error" id="err-employees"></span>
@@ -1893,7 +1902,7 @@ www.ecmanage.nl`,
 
     // Header / Hero
     eyebrow: 'Kostenloser ROI-Kalkulator',
-    heroH1: 'Was kostet Ihr Kleidungsmanagement <em>wirklich?</em>',
+    heroH1: 'Was kostet Ihr Kleidungs\u00ADmanagement <em>wirklich?</em>',
     heroP: 'Berechnen Sie in 2 Minuten die versteckten Kosten Ihres Kleidungsmanagements — und entdecken Sie, was Ihre Organisation mit einem professionellen KMS wie <span style="color:var(--accent)">Ecmanage</span> einsparen kann.',
 
     // Progress labels
@@ -2390,7 +2399,10 @@ function applyTranslations(lang) {
     setSlider('overorderRate', 'overorderVal',     d.overorderRate, '%');
     setSlider('errorRate',     'errorVal',         d.errorRate,     '%');
     setSlider('lostPct',       'lostVal',          d.lostPct,       '%');
-    setSlider('hoursWeek',     'hoursVal',         d.hoursWeek,     t('suffix_uur'));
+    // Uren/week: pas aan op basis van medewerkeraantal als dat al ingevuld is
+    const empVal = parseInt(document.getElementById('employees').value);
+    const suggestedHours = empVal > 0 ? suggestHoursWeek(empVal, d.hoursWeek) : d.hoursWeek;
+    setSlider('hoursWeek',     'hoursVal',         suggestedHours,  t('suffix_uur'));
     setSlider('hourlyWage',    'wageVal',          d.hourlyWage,    '');
     // Uurloon display prefix
     const wageDisplay = document.getElementById('wageVal');
@@ -2401,6 +2413,24 @@ function applyTranslations(lang) {
     const it = document.getElementById('itemsPerEmployee');
     if (it) { it.placeholder = 'bijv. ' + d.items; if (!it.value) it.value = ''; }
     updateSliderContexts();
+  }
+
+  // Schat het aantal uren/week kledingbeheer op basis van bedrijfsgrootte.
+  // Basisregel (sectordefault = 250 mdw): schaalt met √(mdw/250) × sectorBase
+  // Afgekapt op min 1, max 40. Kleine bedrijven krijgen lagere suggestie.
+  function suggestHoursWeek(employees, sectorBaseHours) {
+    if (!employees || employees <= 0) return sectorBaseHours;
+    const scale = Math.sqrt(employees / 250);
+    return Math.max(1, Math.min(40, Math.round(sectorBaseHours * scale)));
+  }
+
+  function autoSuggestHours() {
+    const emp = parseInt(document.getElementById('employees').value);
+    const sector = document.getElementById('sector').value;
+    const d = sectorDefaults[sector];
+    if (!emp || emp <= 0 || !d) return;
+    const hours = suggestHoursWeek(emp, d.hoursWeek);
+    setSlider('hoursWeek', 'hoursVal', hours, t('suffix_uur'));
   }
 
   function showFieldError(id, msg) {
@@ -3291,6 +3321,62 @@ function applyTranslations(lang) {
     padding: 14px 20px;
     font-size: 15px;
   }
+
+  /* Slider stepper buttons: kleiner op mobiel */
+  .step-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    border-radius: 7px;
+  }
+  .slider-row {
+    gap: 6px;
+  }
+
+  /* Executive summary: compacter */
+  #exec-summary {
+    padding: 20px 16px;
+  }
+  #exec-summary [style*="font-size:15px"] {
+    font-size: 13px !important;
+  }
+
+  /* CRM filter buttons: smaller */
+  .crm-filter-btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Rapport dual bars: labels smaller */
+  .rapport-bar-line-label {
+    font-size: 9px !important;
+    width: 24px !important;
+  }
+  .rapport-bar-line {
+    gap: 6px !important;
+  }
+  .rapport-bar-pair {
+    gap: 3px !important;
+  }
+  .rapport-bar-name {
+    font-size: 11px !important;
+  }
+  .rapport-bar-cost-val,
+  .rapport-bar-save-val {
+    font-size: 11px !important;
+    min-width: auto !important;
+  }
+
+  /* Email gate: minder padding op mobiel */
+  .email-gate {
+    padding: 32px 20px 28px !important;
+  }
+  .email-gate h2 {
+    font-size: 22px !important;
+  }
+  .email-gate p {
+    font-size: 13px !important;
+  }
 }
 
 /* iPhone SE en extra kleine schermen (< 375px) */
@@ -3304,6 +3390,7 @@ function applyTranslations(lang) {
   }
   .hero h1 {
     font-size: 24px;
+    letter-spacing: -0.5px;
   }
 }
 
@@ -3481,6 +3568,7 @@ select {
 
 <!-- EmailJS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 <!-- ADMIN DASHBOARD OVERLAY -->
 <div id="admin-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:var(--navy); overflow-y:auto; padding:40px 24px 80px;">
@@ -3492,10 +3580,11 @@ select {
         <div style="width:36px;height:36px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:var(--navy);">EC</div>
         <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;">Admin Dashboard</span>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button onclick="exportLeadsCSV()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export CSV</button>
-        <button onclick="clearAllLeads()" style="background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.25);color:#ff6b6b;padding:8px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg> Wis alles</button>
-        <button onclick="closeAdmin()" style="background:var(--accent);border:none;color:var(--navy);padding:8px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Sluiten</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="exportDataJSON()" style="background:rgba(74,184,240,0.1);border:1px solid rgba(74,184,240,0.25);color:#4ab8f0;padding:8px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+        <button onclick="exportLeadsExcel()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>Excel</button>
+        <button onclick="clearAllLeads()" style="background:rgba(255,80,80,0.06);border:1px solid rgba(255,80,80,0.2);color:#ff6b6b;padding:8px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>Wis</button>
+        <button onclick="logoutAdmin()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#6b7f94;padding:8px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Uitloggen</button>
       </div>
     </div>
 
@@ -3565,7 +3654,7 @@ select {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <!-- Leads over tijd -->
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;">
-          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:16px;color:#fff;">Leads over tijd</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:16px;color:#fff;">Rapporten per maand</div>
           <div id="analyse-time-chart"></div>
         </div>
         <!-- CRM status verdeling -->
@@ -3611,7 +3700,7 @@ const EMAILJS_CONFIG = {
 };
 
 // Admin wachtwoord — verander dit!
-const ADMIN_PASSWORD = 'ecmanage2025';
+const ADMIN_PASSWORD_HASH = '4478370facf4ddc6b39ac284f2daa90b4acb412b495d4c539f3b14b528ad5947';
 
 // ============================================================
 // LEAD OPSLAG (localStorage)
@@ -3630,7 +3719,113 @@ function saveLead(lead) {
 function clearAllLeads() {
   if (!confirm('Weet je zeker dat je alle leads wilt verwijderen?')) return;
   localStorage.removeItem('ecmanage_leads');
+  localStorage.removeItem('ecmanage_crm');
   renderDashboard();
+  renderCRM();
+  renderAnalyse();
+}
+
+// ============================================================
+// EXPORT / IMPORT JSON (leads + CRM data)
+// ============================================================
+function exportDataJSON() {
+  const data = {
+    exportDate: new Date().toISOString(),
+    version: '1.0',
+    leads: getLeads(),
+    crm: getCRMData()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ecmanage-data-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+
+// ============================================================
+// UITLOGGEN
+// ============================================================
+function logoutAdmin() {
+  sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+  closeAdmin();
+}
+
+// ============================================================
+// DEMO DATA (wordt geladen als er geen leads zijn)
+// ============================================================
+function seedDemoData() {
+  const existing = getLeads();
+  if (existing.length > 0) return; // er zijn al leads, niet overschrijven
+
+  const now = new Date();
+  function daysAgo(n) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - n);
+    d.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60));
+    return d;
+  }
+
+  const demoLeads = [
+    { firstName: 'Jan', lastName: 'de Vries', email: 'j.devries@bouwgroep-nederland.nl', company: 'Bouwgroep Nederland', jobRole: 'Operations Manager', sector: 'bouw', employees: '480', clothingValue: '750', totalCost: '€89.340', totalCostRaw: 89340, saving: '€71.472', savingRaw: 71472, roi: '2 mnd', laborCost: '€16.640', errorCost: '€4.120', lossCost: '€32.400', pbmCost: '€36.180', dealValue: 46080, daysAgo: 2 },
+    { firstName: 'Lisa', lastName: 'Bakker', email: 'l.bakker@vanderhelm-logistics.nl', company: 'Van der Helm Logistics', jobRole: 'HR Manager', sector: 'logistiek', employees: '320', clothingValue: '600', totalCost: '€52.180', totalCostRaw: 52180, saving: '€42.264', savingRaw: 42264, roi: '3 mnd', laborCost: '€10.816', errorCost: '€3.640', lossCost: '€18.900', pbmCost: '€18.824', dealValue: 30720, daysAgo: 8 },
+    { firstName: 'Thomas', lastName: 'Jansen', email: 't.jansen@sterkindustrie.nl', company: 'Sterk Industrie B.V.', jobRole: 'Inkoop / Procurement Manager', sector: 'industrie', employees: '190', clothingValue: '600', totalCost: '€36.140', totalCostRaw: 36140, saving: '€29.633', savingRaw: 29633, roi: '3 mnd', laborCost: '€11.648', errorCost: '€2.680', lossCost: '€11.400', pbmCost: '€10.412', dealValue: 18240, daysAgo: 18 },
+    { firstName: 'Sophie', lastName: 'Mulder', email: 's.mulder@zorggroep-west.nl', company: 'Zorggroep West', jobRole: 'Kledingbeheerder', sector: 'zorg', employees: '610', clothingValue: '750', totalCost: '€78.520', totalCostRaw: 78520, saving: '€62.816', savingRaw: 62816, roi: '2 mnd', laborCost: '€9.360', errorCost: '€5.280', lossCost: '€38.750', pbmCost: '€25.130', dealValue: 58560, daysAgo: 38 },
+    { firstName: 'Peter', lastName: 'Hendriks', email: 'p.hendriks@gemeente-rotterdam.nl', company: 'Gemeente Rotterdam', jobRole: 'Operations Manager', sector: 'overheid', employees: '1200', clothingValue: '500', totalCost: '€128.640', totalCostRaw: 128640, saving: '€104.198', savingRaw: 104198, roi: '1 mnd', laborCost: '€12.740', errorCost: '€2.680', lossCost: '€56.250', pbmCost: '€56.970', dealValue: 91200, daysAgo: 55 },
+    { firstName: 'Emma', lastName: 'Visser', email: 'e.visser@freshretail.nl', company: 'Fresh Retail Group', jobRole: 'HR Manager', sector: 'retail', employees: '850', clothingValue: '250', totalCost: '€48.260', totalCostRaw: 48260, saving: '€37.161', savingRaw: 37161, roi: '2 mnd', laborCost: '€5.200', errorCost: '€4.410', lossCost: '€25.200', pbmCost: '€13.450', dealValue: 61200, daysAgo: 72 },
+    { firstName: 'Mark', lastName: 'Smit', email: 'm.smit@techbouw.nl', company: 'TechBouw Holding', jobRole: 'Directeur / eigenaar', sector: 'bouw', employees: '85', clothingValue: '750', totalCost: '€18.920', totalCostRaw: 18920, saving: '€16.460', savingRaw: 16460, roi: '4 mnd', laborCost: '€16.640', errorCost: '€820', lossCost: '€1.460', pbmCost: '€0', dealValue: 10200, daysAgo: 95 },
+    { firstName: 'Anna', lastName: 'Klein', email: 'a.klein@safetyplus.de', company: 'SafetyPlus GmbH', jobRole: 'Einkauf / Procurement Manager', sector: 'industrie', employees: '420', clothingValue: '650', totalCost: '€74.890', totalCostRaw: 74890, saving: '€61.410', savingRaw: 61410, roi: '2 mnd', laborCost: '€11.648', errorCost: '€5.120', lossCost: '€28.600', pbmCost: '€29.522', dealValue: 40320, lang: 'de', daysAgo: 125 },
+    { firstName: 'Rob', lastName: 'van Dijk', email: 'r.vandijk@logicorp.nl', company: 'LogiCorp B.V.', jobRole: 'Operations Manager', sector: 'logistiek', employees: '155', clothingValue: '550', totalCost: '€28.340', totalCostRaw: 28340, saving: '€23.239', savingRaw: 23239, roi: '3 mnd', laborCost: '€10.816', errorCost: '€1.890', lossCost: '€8.250', pbmCost: '€7.384', dealValue: 14880, daysAgo: 148 },
+  ];
+
+  const leads = demoLeads.map(dl => {
+    const ts = daysAgo(dl.daysAgo);
+    return {
+      timestamp: ts.toISOString(),
+      date: ts.toLocaleDateString('nl-NL'),
+      lang: dl.lang || 'nl',
+      firstName: dl.firstName,
+      lastName: dl.lastName,
+      email: dl.email,
+      company: dl.company,
+      jobRole: dl.jobRole,
+      sector: dl.sector,
+      employees: dl.employees,
+      clothingValue: dl.clothingValue,
+      totalCost: dl.totalCost,
+      totalCostRaw: dl.totalCostRaw,
+      saving: dl.saving,
+      savingRaw: dl.savingRaw,
+      roi: dl.roi,
+      laborCost: dl.laborCost,
+      errorCost: dl.errorCost,
+      lossCost: dl.lossCost,
+      pbmCost: dl.pbmCost,
+      dealValue: dl.dealValue,
+    };
+  });
+
+  localStorage.setItem('ecmanage_leads', JSON.stringify(leads));
+
+  // Seed CRM data: verdeel leads over pipeline fases
+  const crm = {};
+  const statuses = ['nieuw', 'nieuw', 'contact', 'contact', 'demo', 'demo', 'offerte', 'klant', 'nieuw'];
+  const notes = ['', '', 'Terugbellen dinsdag', 'Interesse in pilot 50 mdw', 'Demo ingepland 15e', 'Wacht op goedkeuring MT', 'Offerte €40.320/jr verstuurd', 'Contract getekend jan 2025', ''];
+  leads.forEach((l, i) => {
+    const key = l.email + '_' + l.timestamp;
+    crm[key] = {
+      status: statuses[i] || 'nieuw',
+      note: notes[i] || '',
+      activities: statuses[i] !== 'nieuw' ? [
+        { type: 'call', text: 'Eerste contact gehad, interesse in demo.', date: new Date(new Date(l.timestamp).getTime() + 86400000).toISOString(), dateDisplay: new Date(new Date(l.timestamp).getTime() + 86400000).toLocaleDateString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) }
+      ] : []
+    };
+  });
+  localStorage.setItem('ecmanage_crm', JSON.stringify(crm));
 }
 
 // ============================================================
@@ -3703,9 +3898,14 @@ function closeAdminLogin() {
   document.getElementById('admin-pw-error').style.display = 'none';
 }
 
-function checkAdminPw() {
+async function checkAdminPw() {
   const pw = document.getElementById('admin-pw-input').value;
-  if (pw === ADMIN_PASSWORD) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pw);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  if (hashHex === ADMIN_PASSWORD_HASH) {
     sessionStorage.setItem(ADMIN_PASSWORD_KEY, 'ok');
     closeAdminLogin();
     openAdmin();
@@ -3737,6 +3937,7 @@ function switchAdminTab(tab) {
 }
 
 function openAdmin() {
+  seedDemoData(); // vul demo-leads als het dashboard leeg is
   document.getElementById('admin-overlay').style.display = 'block';
   document.body.style.overflow = 'hidden';
   switchAdminTab(_activeAdminTab);
@@ -3993,7 +4194,7 @@ function showCRMDetail(key) {
     + '</div>'
     + '<div>'
     + '<label style="font-size:11px;color:#4b6070;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Notitie</label>'
-    + '<input type="text" id="crm-note-' + key.replace(/[^a-z0-9]/gi,'_') + '" value="' + (crmEntry.note||'').replace(/"/g,'&quot;') + '" placeholder="Notitie toevoegen…" oninput="saveCRMNote(\'' + key + '\',this.value)" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;color:#fff;font-family:\'DM Sans\',sans-serif;font-size:13px;">'
+    + '<textarea id="crm-note-' + key.replace(/[^a-z0-9]/gi,'_') + '" placeholder="Notitie toevoegen…" oninput="saveCRMNote(\'' + key + '\',this.value)" style="width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;color:#fff;font-family:\'DM Sans\',sans-serif;font-size:13px;resize:vertical;min-height:60px;max-height:160px;">' + (crmEntry.note||'').replace(/</g,'&lt;') + '</textarea>'
     + '</div>'
     + '</div>'
     + '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">'
@@ -4075,26 +4276,33 @@ function renderAnalyse() {
         + '</div></div>';
     }).join('');
 
-  // --- Leads over tijd (laatste 8 weken) ---
-  const weekCounts = {};
+  // --- Rapporten per maand (laatste 6 maanden) ---
+  const monthNames = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  const monthCounts = {};
   const now = new Date();
+  // Initialize last 6 months to ensure they all show (even with 0)
+  for (let m = 5; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const key = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+    monthCounts[key] = 0;
+  }
   leads.forEach(l => {
     const d = new Date(l.timestamp);
-    const diffDays = Math.floor((now - d) / (1000*60*60*24));
-    const wk = Math.min(7, Math.floor(diffDays / 7));
-    const lbl = wk === 0 ? 'Deze week' : wk === 1 ? 'Vorige week' : wk + ' wk geleden';
-    weekCounts[lbl] = (weekCounts[lbl]||0) + 1;
+    const key = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+    if (key in monthCounts) monthCounts[key] = (monthCounts[key]||0) + 1;
   });
-  const timeEntries = Object.entries(weekCounts).reverse();
-  const maxWk = Math.max(...timeEntries.map(e=>e[1])) || 1;
-  document.getElementById('analyse-time-chart').innerHTML = timeEntries.length
-    ? '<div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding-bottom:20px;position:relative;">'
-      + timeEntries.map(([lbl,c]) => {
-          const h = Math.max(8, Math.round(c/maxWk*80));
+  const monthEntries = Object.entries(monthCounts);
+  const maxMonth = Math.max(...monthEntries.map(e=>e[1]), 1);
+  document.getElementById('analyse-time-chart').innerHTML = monthEntries.length
+    ? '<div style="display:flex;align-items:flex-end;gap:8px;height:110px;padding-bottom:22px;position:relative;">'
+      + monthEntries.map(([lbl,c]) => {
+          const h = c > 0 ? Math.max(12, Math.round(c/maxMonth*80)) : 4;
+          const barColor = c > 0 ? 'rgba(76,217,138,0.3)' : 'rgba(255,255,255,0.04)';
+          const borderColor = c > 0 ? 'rgba(76,217,138,0.5)' : 'rgba(255,255,255,0.08)';
           return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">'
-            + '<span class="num-arial" style="font-size:11px;color:#4cd98a;font-weight:700;">' + c + '</span>'
-            + '<div style="width:100%;height:' + h + 'px;background:rgba(76,217,138,0.25);border:1px solid rgba(76,217,138,0.4);border-radius:4px 4px 0 0;"></div>'
-            + '<span style="font-size:10px;color:#4b6070;text-align:center;line-height:1.2;">' + lbl + '</span>'
+            + '<span class="num-arial" style="font-size:12px;color:' + (c > 0 ? '#4cd98a' : '#2a4050') + ';font-weight:700;">' + c + '</span>'
+            + '<div style="width:100%;height:' + h + 'px;background:' + barColor + ';border:1px solid ' + borderColor + ';border-radius:4px 4px 0 0;transition:height 0.4s;"></div>'
+            + '<span style="font-size:10px;color:#6b7f94;text-align:center;line-height:1.2;text-transform:capitalize;">' + lbl.split(' ')[0] + '</span>'
             + '</div>';
         }).join('')
       + '</div>'
@@ -4157,7 +4365,7 @@ function renderDashboard() {
   const avgCost     = allLeads.length ? allLeads.reduce((s,l) => s + (l.totalCostRaw||0), 0) / allLeads.length : 0;
   const SVG = {
     users:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
-    money:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.2 7a6 6 0 00-10.4 2m-.6 2h11.2M6.8 17a6 6 0 0010.4-2m.6-2H6.6"/><line x1="4" y1="11" x2="4" y2="13"/><line x1="20" y1="11" x2="20" y2="13"/></svg>`,
+    money:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0"><text x="12" y="17" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="currentColor">€</text></svg>`,
     trend:   `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
     calendar:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
     mail:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>`,
@@ -4176,7 +4384,7 @@ function renderDashboard() {
     { label: 'Vandaag',                   value: allLeads.filter(l => l.date === new Date().toLocaleDateString('nl-NL')).length, icon: SVG.calendar },
   ].map(s => `
     <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">
-      <div style="color:rgba(255,255,255,0.25);margin-bottom:8px;">${s.icon}</div>
+      <div style="color:rgba(255,255,255,0.85);margin-bottom:8px;">${s.icon}</div>
       <div class="num-arial" style="font-size:20px;font-weight:700;color:var(--accent);">${s.value}</div>
       <div style="font-size:12px;color:#6b7f94;margin-top:3px;">${s.label}</div>
     </div>
@@ -4258,21 +4466,101 @@ function deleteLead(displayIndex) {
   renderDashboard();
 }
 
-function exportLeadsCSV() {
+function exportLeadsExcel() {
   const leads = getLeads();
+  const crm = getCRMData();
   if (!leads.length) { alert('Geen leads om te exporteren.'); return; }
-  const headers = ['Datum','Voornaam','Achternaam','E-mail','Bedrijf','Functie','Sector','Taal','Medewerkers','Kledingwaarde','Totale kosten','Besparing','ROI','Arbeidskosten','Fouten','Verlies','PBM'];
-  const rows = leads.map(l => [
-    l.date, l.firstName, l.lastName||'', l.email, l.company||'', l.jobRole||'', l.sector||'', l.lang||'nl',
-    l.employees||'', l.clothingValue||'', l.totalCostRaw||'', l.savingRaw||'', l.roi||'',
-    l.laborCostRaw||'', l.errorCostRaw||'', l.lossCostRaw||'', l.pbmCostRaw||''
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
-  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'ecmanage-leads-' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click(); URL.revokeObjectURL(url);
+  if (typeof XLSX === 'undefined') { alert('Excel-bibliotheek niet geladen. Controleer je internetverbinding.'); return; }
+
+  // --- Sheet 1: Leads overzicht ---
+  const headers = ['Datum','Voornaam','Achternaam','E-mail','Bedrijf','Functie','Sector','Taal','Medewerkers','Kledingwaarde (€)','Totale kosten (€)','Besparing (€)','ROI','Arbeidskosten (€)','Fouten (€)','Verlies (€)','PBM (€)','Dealwaarde (€/jr)','Pipeline status'];
+  const rows = leads.map(l => {
+    const key = l.email + '_' + l.timestamp;
+    const crmEntry = crm[key] || {};
+    const statusMap = { nieuw:'Nieuw', contact:'Contact opgenomen', demo:'Demo gepland', offerte:'Offerte verstuurd', klant:'Klant' };
+    return [
+      l.date, l.firstName, l.lastName||'', l.email, l.company||'', l.jobRole||'', l.sector||'', (l.lang||'nl').toUpperCase(),
+      Number(l.employees)||'', Number(l.clothingValue)||'',
+      l.totalCostRaw||0, l.savingRaw||0, l.roi||'',
+      l.laborCostRaw||0, l.errorCostRaw||0, l.lossCostRaw||0, l.pbmCostRaw||0,
+      l.dealValue||0,
+      statusMap[crmEntry.status||'nieuw'] || 'Nieuw'
+    ];
+  });
+
+  const wsData = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:12},{wch:14},{wch:14},{wch:28},{wch:24},{wch:22},{wch:14},{wch:6},
+    {wch:12},{wch:16},{wch:16},{wch:14},{wch:8},{wch:16},{wch:12},{wch:12},{wch:12},{wch:16},{wch:18}
+  ];
+
+  // Style header row
+  const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, name: 'Arial', sz: 11 }, fill: { fgColor: { rgb: '262624' } }, alignment: { horizontal: 'center' } };
+  const euroStyle = { numFmt: '€#,##0', font: { name: 'Arial', sz: 10 } };
+  const textStyle = { font: { name: 'Arial', sz: 10 }, alignment: { horizontal: 'left' } };
+
+  // Apply header styles
+  for (let c = 0; c < headers.length; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r:0,c:c})];
+    if (cell) { cell.s = headerStyle; }
+  }
+
+  // Apply data styles
+  const euroCols = [10,11,13,14,15,16,17]; // 0-indexed columns with euro values
+  for (let r = 1; r <= rows.length; r++) {
+    for (let c = 0; c < headers.length; c++) {
+      const cell = ws[XLSX.utils.encode_cell({r:r,c:c})];
+      if (!cell) continue;
+      if (euroCols.includes(c) && typeof cell.v === 'number') {
+        cell.s = euroStyle;
+        cell.t = 'n';
+      } else {
+        cell.s = textStyle;
+      }
+    }
+  }
+
+  // --- Sheet 2: Pipeline samenvatting ---
+  const statusCounts = { 'Nieuw': 0, 'Contact opgenomen': 0, 'Demo gepland': 0, 'Offerte verstuurd': 0, 'Klant': 0 };
+  const statusValues = { 'Nieuw': 0, 'Contact opgenomen': 0, 'Demo gepland': 0, 'Offerte verstuurd': 0, 'Klant': 0 };
+  leads.forEach(l => {
+    const key = l.email + '_' + l.timestamp;
+    const crmEntry = crm[key] || {};
+    const statusMap = { nieuw:'Nieuw', contact:'Contact opgenomen', demo:'Demo gepland', offerte:'Offerte verstuurd', klant:'Klant' };
+    const label = statusMap[crmEntry.status||'nieuw'] || 'Nieuw';
+    statusCounts[label] = (statusCounts[label]||0) + 1;
+    statusValues[label] = (statusValues[label]||0) + (l.dealValue||0);
+  });
+
+  const pipeData = [
+    ['Pipeline Status', 'Aantal', 'Dealwaarde (€/jr)'],
+    ...Object.keys(statusCounts).map(s => [s, statusCounts[s], statusValues[s]]),
+    [],
+    ['Totaal', leads.length, Object.values(statusValues).reduce((a,b)=>a+b,0)],
+    [],
+    ['Export datum', new Date().toLocaleDateString('nl-NL', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })],
+    ['Gegenereerd door', 'Ecmanage Kostencalculator']
+  ];
+
+  const ws2 = XLSX.utils.aoa_to_sheet(pipeData);
+  ws2['!cols'] = [{wch:22},{wch:10},{wch:18}];
+
+  // Style pipeline headers
+  for (let c = 0; c < 3; c++) {
+    const cell = ws2[XLSX.utils.encode_cell({r:0,c:c})];
+    if (cell) cell.s = headerStyle;
+  }
+
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Pipeline');
+
+  // Download
+  XLSX.writeFile(wb, 'ecmanage-leads-' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 // ============================================================
